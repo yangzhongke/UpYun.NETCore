@@ -1,0 +1,11 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard1.3</TargetFramework>
+    <Description>UpYun .net core SDK. http://www.upyun.com by  yangzhongke from http://www.rupeng.com</Description>
+    <PackageProjectUrl>http://www.rupeng.com</PackageProjectUrl>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <RepositoryUrl>https://github.com/yangzhongke/UpYun.NETCore</RepositoryUrl>
+  </PropertyGroup>
+
+</Project>
