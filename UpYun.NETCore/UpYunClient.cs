@@ -99,7 +99,8 @@ namespace UpYun.NETCore
         
         private async Task<HttpResponseMessage> newWorker(string method, string Url, byte[] postData, Dictionary<string,object> headers)
         {
-            using (HttpClient httpClient = new HttpClient())
+            using (HttpClientHandler handler = new HttpClientHandler { UseProxy = false })
+            using (HttpClient httpClient = new HttpClient(handler))
             using (ByteArrayContent byteContent = new ByteArrayContent(postData))
             {
                 httpClient.BaseAddress = new Uri("http://" + api_domain);

@@ -6,6 +6,7 @@
     <PackageProjectUrl>http://www.rupeng.com</PackageProjectUrl>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <RepositoryUrl>https://github.com/yangzhongke/UpYun.NETCore</RepositoryUrl>
+    <Version>1.0.1</Version>
   </PropertyGroup>
 
 </Project>
