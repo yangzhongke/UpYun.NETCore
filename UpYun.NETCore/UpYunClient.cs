@@ -10,7 +10,7 @@ namespace UpYun.NETCore
 {
     public class UpYunClient
     {
-       
+        private IHttpClientFactory httpClientFactory;
 
         private string bucketname;
         private string username;
@@ -31,11 +31,12 @@ namespace UpYun.NETCore
         * @param $password 密码
         * return UpYun object
         */
-        public UpYunClient(string bucketname, string username, string password)
+        public UpYunClient(string bucketname, string username, string password, IHttpClientFactory httpClientFactory)
         {
             this.bucketname = bucketname;
             this.username = username;
             this.password = password;
+            this.httpClientFactory = httpClientFactory;
         }
 
         /**
@@ -99,13 +100,10 @@ namespace UpYun.NETCore
         
         private async Task<HttpResponseMessage> newWorker(string method, string Url, byte[] postData, Dictionary<string,object> headers)
         {
-            using (HttpClientHandler handler = new HttpClientHandler { UseProxy = false })
-            using (HttpClient httpClient = new HttpClient(handler))
+            HttpClient httpClient = httpClientFactory.CreateClient();
             using (ByteArrayContent byteContent = new ByteArrayContent(postData))
             {
                 httpClient.BaseAddress = new Uri("http://" + api_domain);
-                ;
-
                 if (this.auto_mkdir == true)
                 {
                     byteContent.Headers.Add("mkdir", "true");

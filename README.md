@@ -7,6 +7,7 @@ Install-Package UpYun.NETCore
 ```
 示例代码：  
 ```C#
-  UpYunClient upyun = new UpYunClient("bucketname", "username", "secret");  
-  var a = upyun.WriteFileAsync("/test.txt", new byte[] { 3, 5, 6, 222, 33, 99, 21 }, true).Result;
+UpYunClient upyun = new UpYunClient(bucketName, username, password, httpClientFactory);
+byte[] bytes = Encoding.UTF8.GetBytes("www.youzack.com");
+var a = await upyun.WriteFileAsync("/test.txt", bytes, true);
 ```
