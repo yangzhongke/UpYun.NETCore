@@ -1,12 +1,16 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard1.3</TargetFramework>
-    <Description>UpYun .net core SDK. http://www.upyun.com by  yangzhongke from http://www.rupeng.com</Description>
-    <PackageProjectUrl>http://www.rupeng.com</PackageProjectUrl>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <Description>UpYun .net core SDK. http://www.upyun.com by  yangzhongke</Description>
+    <PackageProjectUrl>https://github.com/yangzhongke/UpYun.NETCore</PackageProjectUrl>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <RepositoryUrl>https://github.com/yangzhongke/UpYun.NETCore</RepositoryUrl>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
   </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Http" Version="5.0.0" />
+  </ItemGroup>
 
 </Project>
