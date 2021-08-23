@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace UpYun.NETCore
@@ -59,18 +61,23 @@ namespace UpYun.NETCore
             this.upAuth = upAuth;
         }
 
-        private void upyunAuth(ByteArrayContent requestContent,string method,string uri)
+        private async Task UpYunAuthAsync(ByteArrayContent requestContent,string method,string uri, CancellationToken cancellationToken = default)
         {
             DateTime dt = DateTime.UtcNow;
             string date = dt.ToString("ddd, dd MMM yyyy HH':'mm':'ss 'GMT'", new CultureInfo("en-US"));
 
             requestContent.Headers.Add("Date", date);
-            string body = requestContent.ReadAsStringAsync().Result;
+            string body = await requestContent.ReadAsStringAsync();
             string auth;
             if (!string.IsNullOrEmpty(body))
-                auth = md5(method + '&' + uri + '&' + date + '&' + requestContent.ReadAsByteArrayAsync().Result.Length + '&' + md5(this.password));
+            {
+                byte[] bytesContent = await requestContent.ReadAsByteArrayAsync();
+                auth = md5(method + '&' + uri + '&' + date + '&' + bytesContent.Length + '&' + md5(this.password));
+            }
             else
+            { 
                 auth = md5(method + '&' + uri + '&' + date + '&' + 0 + '&' + md5(this.password));
+            }
             requestContent.Headers.Add("Authorization", "UpYun " + this.username + ':' + auth);
         }
 
@@ -78,15 +85,15 @@ namespace UpYun.NETCore
         {
             using (MD5 m = MD5.Create())
             {
-                byte[] s = m.ComputeHash(UnicodeEncoding.UTF8.GetBytes(str));
+                byte[] s = m.ComputeHash(Encoding.UTF8.GetBytes(str));
                 string resule = BitConverter.ToString(s);
                 resule = resule.Replace("-", "");
                 return resule.ToLower();
             }                
         }
-        private async Task<bool> DeleteAsync(string path, Dictionary<string,object> headers)
+        private async Task<bool> DeleteAsync(string path, Dictionary<string,object> headers, CancellationToken cancellationToken = default)
         {
-            var resp = await newWorker("DELETE", DL + this.bucketname + path, null, headers);
+            var resp = await NewWorkAsync("DELETE", DL + this.bucketname + path, null, headers,cancellationToken);
             if (resp.StatusCode == System.Net.HttpStatusCode.OK)
             {
                 return true;
@@ -98,7 +105,8 @@ namespace UpYun.NETCore
         }
 
         
-        private async Task<HttpResponseMessage> newWorker(string method, string Url, byte[] postData, Dictionary<string,object> headers)
+        private async Task<HttpResponseMessage> NewWorkAsync(string method, string Url, byte[] postData, Dictionary<string,object> headers,
+            CancellationToken cancellationToken=default)
         {
             HttpClient httpClient = httpClientFactory.CreateClient();
             using (ByteArrayContent byteContent = new ByteArrayContent(postData))
@@ -126,7 +134,7 @@ namespace UpYun.NETCore
 
                 if (this.upAuth)
                 {
-                    upyunAuth(byteContent, method, Url);
+                    await UpYunAuthAsync(byteContent, method, Url, cancellationToken);
                 }
                 else
                 {
@@ -143,19 +151,19 @@ namespace UpYun.NETCore
                 HttpResponseMessage responseMsg;
                 if ("Get".Equals(method, StringComparison.OrdinalIgnoreCase))
                 {
-                    responseMsg = await httpClient.GetAsync(Url);
+                    responseMsg = await httpClient.GetAsync(Url, cancellationToken);
                 }
                 else if ("Post".Equals(method, StringComparison.OrdinalIgnoreCase))
                 {
-                    responseMsg = await httpClient.PostAsync(Url, byteContent);
+                    responseMsg = await httpClient.PostAsync(Url, byteContent, cancellationToken);
                 }
                 else if ("PUT".Equals(method, StringComparison.OrdinalIgnoreCase))
                 {
-                    responseMsg = await httpClient.PutAsync(Url, byteContent);
+                    responseMsg = await httpClient.PutAsync(Url, byteContent, cancellationToken);
                 }
                 else if ("Delete".Equals(method, StringComparison.OrdinalIgnoreCase))
                 {
-                    responseMsg = await httpClient.DeleteAsync(Url);
+                    responseMsg = await httpClient.DeleteAsync(Url, cancellationToken);
                 }
                 else
                 {
@@ -180,11 +188,11 @@ namespace UpYun.NETCore
         * return 空间占用量，失败返回 null
         */
 
-        public async Task<long> GetFolderUsageAsync(string url)
+        public async Task<long> GetFolderUsageAsync(string url, CancellationToken cancellationToken = default)
         {
             Dictionary<string,object> headers = new Dictionary<string,object>();
             long size;
-            using (var resp = await newWorker("GET", DL + this.bucketname + url + "?usage", null, headers))
+            using (var resp = await NewWorkAsync("GET", DL + this.bucketname + url + "?usage", null, headers, cancellationToken))
             {
                 try
                 {
@@ -204,22 +212,22 @@ namespace UpYun.NETCore
            * @param $path 目标路径
            * return 空间占用量，失败返回 null
            */
-        public async Task<long> GetBucketUsageAsync()
+        public async Task<long> GetBucketUsageAsync(CancellationToken cancellationToken = default)
         {
-            return await GetFolderUsageAsync("/");
+            return await GetFolderUsageAsync("/", cancellationToken);
         }
         /**
         * 创建目录
         * @param $path 目录路径
         * return true or false
         */
-        public async Task<bool> MkDirAsync(string path, bool auto_mkdir)
+        public async Task<bool> MkDirAsync(string path, bool auto_mkdir, CancellationToken cancellationToken = default)
         {
             this.auto_mkdir = auto_mkdir;
             Dictionary<string,object> headers = new Dictionary<string,object>();
             headers.Add("folder", "create");
 
-            using (var resp = await newWorker("POST", DL + this.bucketname + path, null, headers))
+            using (var resp = await NewWorkAsync("POST", DL + this.bucketname + path, null, headers, cancellationToken))
             {
                 if (resp.StatusCode == System.Net.HttpStatusCode.OK)
                 {
@@ -237,10 +245,10 @@ namespace UpYun.NETCore
         * @param $path 目录路径
         * return true or false
         */
-        public async Task<bool> RmDirAsync(string path)
+        public async Task<bool> RmDirAsync(string path, CancellationToken cancellationToken = default)
         {
             Dictionary<string,object> headers = new Dictionary<string,object>();
-            return await DeleteAsync(path, headers);
+            return await DeleteAsync(path, headers, cancellationToken);
         }
 
         /**
@@ -248,11 +256,11 @@ namespace UpYun.NETCore
         * @param $path 目录路径
         * return array 数组 或 null
         */
-        public async Task<List<FolderItem>> ReadDirAsync(string url)
+        public async Task<List<FolderItem>> ReadDirAsync(string url, CancellationToken cancellationToken = default)
         {
             Dictionary<string,object> headers = new Dictionary<string,object>();
             byte[] a = null;
-            using (var resp = await newWorker("GET", DL + this.bucketname + url, a, headers))
+            using (var resp = await NewWorkAsync("GET", DL + this.bucketname + url, a, headers, cancellationToken))
             {
                 string strhtml = await resp.Content.ReadAsStringAsync();
                 strhtml = strhtml.Replace("\t", "\\");
@@ -278,11 +286,11 @@ namespace UpYun.NETCore
         * @param $datas 文件内容 或 文件IO数据流
         * return true or false
         */
-        public async Task<bool> WriteFileAsync(string path, byte[] data, bool auto_mkdir)
+        public async Task<bool> WriteFileAsync(string path, byte[] data, bool auto_mkdir, CancellationToken cancellationToken = default)
         {
             Dictionary<string,object> headers = new Dictionary<string,object>();
             this.auto_mkdir = auto_mkdir;
-            using (var resp = await newWorker("POST", DL + this.bucketname + path, data, headers))
+            using (var resp = await NewWorkAsync("POST", DL + this.bucketname + path, data, headers, cancellationToken))
             {
                 if (resp.StatusCode == System.Net.HttpStatusCode.OK)
                 {
@@ -300,10 +308,10 @@ namespace UpYun.NETCore
         * @param $file 文件路径（包含文件名）
         * return true or false
         */
-        public async Task<bool> DeleteFileAsync(string path)
+        public async Task<bool> DeleteFileAsync(string path, CancellationToken cancellationToken = default)
         {
             Dictionary<string,object> headers = new Dictionary<string,object>();
-            return await DeleteAsync(path, headers);
+            return await DeleteAsync(path, headers, cancellationToken);
         }
 
         /**
@@ -312,12 +320,12 @@ namespace UpYun.NETCore
         * @param $output_file 可传递文件IO数据流（默认为 null，结果返回文件内容，如设置文件数据流，将返回 true or false）
         * return 文件内容 或 null
         */
-        public async Task<byte[]> ReadFileAsync(string path)
+        public async Task<byte[]> ReadFileAsync(string path, CancellationToken cancellationToken = default)
         {
             Dictionary<string,object> headers = new Dictionary<string,object>();
             byte[] a = null;
 
-            using (var resp = await newWorker("GET", DL + this.bucketname + path, a, headers))
+            using (var resp = await NewWorkAsync("GET", DL + this.bucketname + path, a, headers, cancellationToken))
             {
                 return await resp.Content.ReadAsByteArrayAsync();
             }                
@@ -346,11 +354,11 @@ namespace UpYun.NETCore
         * @param $file 文件路径（包含文件名）
         * return array('type'=> file | folder, 'size'=> file size, 'date'=> unix time) 或 null
         */
-        public async Task<Dictionary<string,object>> GetFileInfoAsync(string file)
+        public async Task<Dictionary<string,object>> GetFileInfoAsync(string file, CancellationToken cancellationToken = default)
         {
             Dictionary<string,object> headers = new Dictionary<string,object>();
             byte[] a = null;
-            using (var resp = await newWorker("HEAD", DL + this.bucketname + file, a, headers))
+            using (var resp = await NewWorkAsync("HEAD", DL + this.bucketname + file, a, headers, cancellationToken))
             {
                 Dictionary<string, object> ht;
                 try
@@ -376,16 +384,14 @@ namespace UpYun.NETCore
         //计算文件的MD5码
         public static string md5_file(string pathName)
         {
-            string strResult = "";
-            string strHashData = "";
+            string strResult;
+            string strHashData;
 
             byte[] arrbytHashValue;
-            System.IO.FileStream oFileStream = null;
-
             using (var md5 = MD5.Create())
+            using (FileStream oFileStream = new FileStream(pathName, System.IO.FileMode.Open,
+                         System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite))
             {
-                oFileStream = new System.IO.FileStream(pathName, System.IO.FileMode.Open,
-                         System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite);
                 arrbytHashValue = md5.ComputeHash(oFileStream);//计算指定Stream 对象的哈希值
                 //由以连字符分隔的十六进制对构成的String，其中每一对表示value 中对应的元素；例如“F-2C-4A”
                 strHashData = System.BitConverter.ToString(arrbytHashValue);
