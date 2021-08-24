@@ -91,16 +91,16 @@ namespace UpYun.NETCore
                 return resule.ToLower();
             }                
         }
-        private async Task<bool> DeleteAsync(string path, Dictionary<string,object> headers, CancellationToken cancellationToken = default)
+        private async Task<UpYunResult> DeleteAsync(string path, Dictionary<string,object> headers, CancellationToken cancellationToken = default)
         {
             var resp = await NewWorkAsync("DELETE", DL + this.bucketname + path, null, headers,cancellationToken);
             if (resp.StatusCode == System.Net.HttpStatusCode.OK)
             {
-                return true;
+                return UpYunResult.OK;
             }
             else
             {
-                return false;
+                return await UpYunResult.CreateErrorAsync(resp);
             }
         }
 
@@ -188,23 +188,23 @@ namespace UpYun.NETCore
         * return 空间占用量，失败返回 null
         */
 
-        public async Task<long> GetFolderUsageAsync(string url, CancellationToken cancellationToken = default)
+        public async Task<UpYunResult<long>> GetFolderUsageAsync(string url, CancellationToken cancellationToken = default)
         {
             Dictionary<string,object> headers = new Dictionary<string,object>();
-            long size;
             using (var resp = await NewWorkAsync("GET", DL + this.bucketname + url + "?usage", null, headers, cancellationToken))
             {
-                try
+                if (resp.StatusCode == System.Net.HttpStatusCode.OK)
                 {
                     string strhtml = await resp.Content.ReadAsStringAsync();
-                    size = long.Parse(strhtml);
+                    long size = long.Parse(strhtml);
+                    return size;
                 }
-                catch (Exception)
+                else
                 {
-                    size = 0;
+                    return await UpYunResult<long>.CreateErrorAsync(resp);
                 }
             }
-            return size;
+            
         }
 
         /**
@@ -212,16 +212,16 @@ namespace UpYun.NETCore
            * @param $path 目标路径
            * return 空间占用量，失败返回 null
            */
-        public async Task<long> GetBucketUsageAsync(CancellationToken cancellationToken = default)
+        public Task<UpYunResult<long>> GetBucketUsageAsync(CancellationToken cancellationToken = default)
         {
-            return await GetFolderUsageAsync("/", cancellationToken);
+            return GetFolderUsageAsync("/", cancellationToken);
         }
         /**
         * 创建目录
         * @param $path 目录路径
         * return true or false
         */
-        public async Task<bool> MkDirAsync(string path, bool auto_mkdir, CancellationToken cancellationToken = default)
+        public async Task<UpYunResult> MkDirAsync(string path, bool auto_mkdir, CancellationToken cancellationToken = default)
         {
             this.auto_mkdir = auto_mkdir;
             Dictionary<string,object> headers = new Dictionary<string,object>();
@@ -231,11 +231,11 @@ namespace UpYun.NETCore
             {
                 if (resp.StatusCode == System.Net.HttpStatusCode.OK)
                 {
-                    return true;
+                    return UpYunResult.OK;
                 }
                 else
                 {
-                    return false;
+                    return await UpYunResult.CreateErrorAsync(resp);
                 }
             }                
         }
@@ -245,10 +245,10 @@ namespace UpYun.NETCore
         * @param $path 目录路径
         * return true or false
         */
-        public async Task<bool> RmDirAsync(string path, CancellationToken cancellationToken = default)
+        public Task<UpYunResult> RmDirAsync(string path, CancellationToken cancellationToken = default)
         {
             Dictionary<string,object> headers = new Dictionary<string,object>();
-            return await DeleteAsync(path, headers, cancellationToken);
+            return DeleteAsync(path, headers, cancellationToken);
         }
 
         /**
@@ -256,25 +256,32 @@ namespace UpYun.NETCore
         * @param $path 目录路径
         * return array 数组 或 null
         */
-        public async Task<List<FolderItem>> ReadDirAsync(string url, CancellationToken cancellationToken = default)
+        public async Task<UpYunResult<List<FolderItem>>> ReadDirAsync(string url, CancellationToken cancellationToken = default)
         {
             Dictionary<string,object> headers = new Dictionary<string,object>();
             byte[] a = null;
             using (var resp = await NewWorkAsync("GET", DL + this.bucketname + url, a, headers, cancellationToken))
             {
-                string strhtml = await resp.Content.ReadAsStringAsync();
-                strhtml = strhtml.Replace("\t", "\\");
-                strhtml = strhtml.Replace("\n", "\\");
-                string[] ss = strhtml.Split('\\');
-                int i = 0;
-                List<FolderItem> list = new List<FolderItem>();
-                while (i < ss.Length)
+                if (resp.StatusCode == System.Net.HttpStatusCode.OK)
                 {
-                    FolderItem fi = new FolderItem(ss[i], ss[i + 1], int.Parse(ss[i + 2]), int.Parse(ss[i + 3]));
-                    list.Add(fi);
-                    i += 4;
+                    string strhtml = await resp.Content.ReadAsStringAsync();
+                    strhtml = strhtml.Replace("\t", "\\");
+                    strhtml = strhtml.Replace("\n", "\\");
+                    string[] ss = strhtml.Split('\\');
+                    int i = 0;
+                    List<FolderItem> list = new List<FolderItem>();
+                    while (i < ss.Length)
+                    {
+                        FolderItem fi = new FolderItem(ss[i], ss[i + 1], int.Parse(ss[i + 2]), int.Parse(ss[i + 3]));
+                        list.Add(fi);
+                        i += 4;
+                    }
+                    return list;
                 }
-                return list;
+                else
+                {
+                    return await UpYunResult<List<FolderItem>>.CreateErrorAsync(resp);
+                }
             }
 
         }
@@ -286,7 +293,7 @@ namespace UpYun.NETCore
         * @param $datas 文件内容 或 文件IO数据流
         * return true or false
         */
-        public async Task<bool> WriteFileAsync(string path, byte[] data, bool auto_mkdir, CancellationToken cancellationToken = default)
+        public async Task<UpYunResult> WriteFileAsync(string path, byte[] data, bool auto_mkdir, CancellationToken cancellationToken = default)
         {
             Dictionary<string,object> headers = new Dictionary<string,object>();
             this.auto_mkdir = auto_mkdir;
@@ -294,11 +301,11 @@ namespace UpYun.NETCore
             {
                 if (resp.StatusCode == System.Net.HttpStatusCode.OK)
                 {
-                    return true;
+                    return UpYunResult.OK;
                 }
                 else
                 {
-                    return false;
+                    return await UpYunResult.CreateErrorAsync(resp);
                 }
             }
             
@@ -308,10 +315,10 @@ namespace UpYun.NETCore
         * @param $file 文件路径（包含文件名）
         * return true or false
         */
-        public async Task<bool> DeleteFileAsync(string path, CancellationToken cancellationToken = default)
+        public Task<UpYunResult> DeleteFileAsync(string path, CancellationToken cancellationToken = default)
         {
             Dictionary<string,object> headers = new Dictionary<string,object>();
-            return await DeleteAsync(path, headers, cancellationToken);
+            return DeleteAsync(path, headers, cancellationToken);
         }
 
         /**
@@ -320,14 +327,21 @@ namespace UpYun.NETCore
         * @param $output_file 可传递文件IO数据流（默认为 null，结果返回文件内容，如设置文件数据流，将返回 true or false）
         * return 文件内容 或 null
         */
-        public async Task<byte[]> ReadFileAsync(string path, CancellationToken cancellationToken = default)
+        public async Task<UpYunResult<byte[]>> ReadFileAsync(string path, CancellationToken cancellationToken = default)
         {
             Dictionary<string,object> headers = new Dictionary<string,object>();
             byte[] a = null;
 
             using (var resp = await NewWorkAsync("GET", DL + this.bucketname + path, a, headers, cancellationToken))
             {
-                return await resp.Content.ReadAsByteArrayAsync();
+                if (resp.StatusCode == System.Net.HttpStatusCode.OK)
+                {
+                    return await resp.Content.ReadAsByteArrayAsync();
+                }
+                else
+                {
+                    return await UpYunResult<byte[]>.CreateErrorAsync(resp);
+                }
             }                
         }
         /**
@@ -354,25 +368,28 @@ namespace UpYun.NETCore
         * @param $file 文件路径（包含文件名）
         * return array('type'=> file | folder, 'size'=> file size, 'date'=> unix time) 或 null
         */
-        public async Task<Dictionary<string,object>> GetFileInfoAsync(string file, CancellationToken cancellationToken = default)
+        public async Task<UpYunResult<Dictionary<string, object>>> GetFileInfoAsync(string file, CancellationToken cancellationToken = default)
         {
             Dictionary<string,object> headers = new Dictionary<string,object>();
             byte[] a = null;
             using (var resp = await NewWorkAsync("HEAD", DL + this.bucketname + file, a, headers, cancellationToken))
             {
-                Dictionary<string, object> ht;
-                try
+                if (resp.StatusCode == System.Net.HttpStatusCode.OK)
                 {
-                    ht = new Dictionary<string, object>();
-                    ht.Add("type", this.tmp_infos["x-upyun-file-type"]);
-                    ht.Add("size", this.tmp_infos["x-upyun-file-size"]);
-                    ht.Add("date", this.tmp_infos["x-upyun-file-date"]);
+                    Dictionary<string, object> respHeaders =new Dictionary<string, object>();
+                    if(tmp_infos.ContainsKey("x-upyun-file-type")&&tmp_infos.ContainsKey("x-upyun-file-size")
+                        && tmp_infos.ContainsKey("x-upyun-file-date"))
+                    {
+                        respHeaders.Add("type", tmp_infos["x-upyun-file-type"]);
+                        respHeaders.Add("size", tmp_infos["x-upyun-file-size"]);
+                        respHeaders.Add("date", tmp_infos["x-upyun-file-date"]);
+                    }
+                    return respHeaders;
                 }
-                catch (Exception)
+                else
                 {
-                    ht = new Dictionary<string, object>();
-                }
-                return ht;
+                    return await UpYunResult<Dictionary<string, object>>.CreateErrorAsync(resp);
+                }                
             }            
         }
         //获取上传后的图片信息（仅图片空间有返回数据）

@@ -23,7 +23,7 @@ namespace UpYun.NetCore.Tests
                 UpYunClient upyun = new UpYunClient(bucketName, username, password, httpClientFactory);
                 byte[] bytes = Encoding.UTF8.GetBytes("www.youzack.com");
                 var a = await upyun.WriteFileAsync("/test.txt", bytes, true);
-                Console.WriteLine(a);
+                Console.WriteLine(a.IsOK+","+a.Msg);
             }                
             Console.ReadKey();
         }
