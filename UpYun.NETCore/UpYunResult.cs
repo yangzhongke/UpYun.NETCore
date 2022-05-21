@@ -21,6 +21,11 @@ namespace UpYun.NETCore
             result.IsOK = false;
             return result;
         }
+
+        public override string ToString()
+        {
+            return $"IsOk={IsOK},Msg={Msg},Code={Code},Id={Id}";
+        }
     }
 
     public class UpYunResult<T>
@@ -51,6 +56,11 @@ namespace UpYun.NETCore
         public static implicit operator UpYunResult<T>(T value)
         {
             return new UpYunResult<T> { IsOK=true,Value=value};
+        }
+
+        public override string ToString()
+        {
+            return $"IsOk={IsOK},Msg={Msg},Code={Code},Id={Id},Value={Value}";
         }
     }
 }

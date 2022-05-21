@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace UpYun.NETCore
+﻿namespace UpYun.NETCore
 {
     //目录条目类
     public class FolderItem
@@ -17,6 +13,11 @@ namespace UpYun.NETCore
             this.filetype = filetype;
             this.size = size;
             this.number = number;
+        }
+
+        public override string ToString()
+        {
+            return $"filename={filename},filetype={filetype},size={size},number={number}";
         }
     }
 }

@@ -109,6 +109,10 @@ namespace UpYun.NETCore
             CancellationToken cancellationToken=default)
         {
             HttpClient httpClient = httpClientFactory.CreateClient();
+            if(postData==null)
+            {
+                postData = new byte[0];
+            }
             using (ByteArrayContent byteContent = new ByteArrayContent(postData))
             {
                 httpClient.BaseAddress = new Uri("http://" + api_domain);
@@ -259,6 +263,7 @@ namespace UpYun.NETCore
         public async Task<UpYunResult<List<FolderItem>>> ReadDirAsync(string url, CancellationToken cancellationToken = default)
         {
             Dictionary<string,object> headers = new Dictionary<string,object>();
+            //headers["Accept"] = "application/json";
             byte[] a = null;
             using (var resp = await NewWorkAsync("GET", DL + this.bucketname + url, a, headers, cancellationToken))
             {
@@ -267,7 +272,7 @@ namespace UpYun.NETCore
                     string strhtml = await resp.Content.ReadAsStringAsync();
                     strhtml = strhtml.Replace("\t", "\\");
                     strhtml = strhtml.Replace("\n", "\\");
-                    string[] ss = strhtml.Split('\\');
+                    string[] ss = strhtml.Split('\\', StringSplitOptions.RemoveEmptyEntries);
                     int i = 0;
                     List<FolderItem> list = new List<FolderItem>();
                     while (i < ss.Length)
@@ -320,6 +325,42 @@ namespace UpYun.NETCore
             Dictionary<string,object> headers = new Dictionary<string,object>();
             return DeleteAsync(path, headers, cancellationToken);
         }
+
+       /// <summary>
+       /// 移动文件
+       /// </summary>
+       /// <param name="path">源路径</param>
+       /// <param name="dest">目标路径</param>
+       /// <param name="cancellationToken"></param>
+       /// <returns></returns>
+        public async Task<UpYunResult> MoveFileAsync(string path, string dest, CancellationToken cancellationToken = default)
+        {
+            Dictionary <string,object> headers = new Dictionary<string,object>();
+            headers["X-Upyun-Move-Source"] = DL + this.bucketname + path;
+            var resp = await NewWorkAsync("PUT", DL + this.bucketname + dest, null, headers, cancellationToken);
+            if (resp.StatusCode == System.Net.HttpStatusCode.OK)
+            {
+                return UpYunResult.OK;
+            }
+            else
+            {
+                return await UpYunResult.CreateErrorAsync(resp);
+            }
+        }
+
+        /// <summary>
+        /// 重命名文件
+        /// </summary>
+        /// <param name="path">源路径</param>
+        /// <param name="dest">目标路径</param>
+        /// <param name="cancellationToken"></param>
+        /// <returns></returns>
+
+        public Task<UpYunResult> RenameFileAsync(string path, string dest, CancellationToken cancellationToken = default)
+        {
+            return MoveFileAsync(path, dest, cancellationToken);
+        }
+
 
         /**
         * 读取文件
