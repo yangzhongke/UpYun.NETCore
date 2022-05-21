@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using System;
+using System.IO;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -28,9 +29,16 @@ namespace UpYun.NetCore.Tests
                 /*
                 var r = await upyun.RenameFileAsync("/02b2b5f0-3484-11e6-81f3-ccb34c23190a%20%5Blow%5D.mp3", "/02b2b5f0-3484-11e6-81f3-ccb34c23190a.mp3");
                 Console.WriteLine(r);*/
-                await ListAsync(upyun, "/");
-            }                
-            Console.ReadKey();
+                 await ListAsync(upyun, "/");
+                //var r = await upyun.RenameFileAsync("/电脑02b2b5f0-3484-11e6-81f3-ccb34c23190a [low].mp3", "/电脑02b2b5f0-3484-11e6-81f3-ccb34c23190a.mp3");
+                //Console.WriteLine(r);
+            }
+            Console.ReadLine(); Console.ReadLine();
+        }
+
+        static void WriteLog(string s)
+        {
+            File.AppendAllText("d:/1.txt",s+"\r\n");
         }
 
         static async Task ListAsync(UpYunClient upyun, string folder)
@@ -44,8 +52,35 @@ namespace UpYun.NetCore.Tests
                     folder = folder + "/";
                 }
                 fullPath=folder + item.filename;
-                Console.WriteLine(fullPath);
-
+                //Console.WriteLine(fullPath);
+                if(fullPath.Contains(" [low]"))
+                {
+                    string newPath = fullPath.Replace(" [low]", "");
+                    try
+                    {
+                        var r = await upyun.RenameFileAsync(fullPath, newPath);
+                        if (r.IsOK)
+                        {
+                            Console.WriteLine("成功：" + fullPath + "," + newPath);
+                        }
+                        else
+                        {
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.BackgroundColor = ConsoleColor.White;
+                            Console.WriteLine("失败：" + fullPath + "," + newPath + "," + r);
+                            WriteLog("失败：" + fullPath + "," + newPath + "," + r);
+                            Console.ResetColor();
+                        }
+                    }
+                    catch(Exception ex)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Red;
+                        Console.BackgroundColor = ConsoleColor.White;
+                        Console.WriteLine("失败：" + fullPath + "," + newPath + "," + ex);
+                        WriteLog("失败：" + fullPath + "," + newPath + "," + ex);
+                        Console.ResetColor();
+                    }
+                }
                 if(item.filetype=="F")
                 {
                     await ListAsync(upyun, fullPath);

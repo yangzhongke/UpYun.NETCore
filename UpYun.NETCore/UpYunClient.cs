@@ -105,7 +105,7 @@ namespace UpYun.NETCore
         }
 
         
-        private async Task<HttpResponseMessage> NewWorkAsync(string method, string Url, byte[] postData, Dictionary<string,object> headers,
+        private async Task<HttpResponseMessage> NewWorkAsync(string method, string url, byte[] postData, Dictionary<string,object> headers,
             CancellationToken cancellationToken=default)
         {
             HttpClient httpClient = httpClientFactory.CreateClient();
@@ -138,7 +138,7 @@ namespace UpYun.NETCore
 
                 if (this.upAuth)
                 {
-                    await UpYunAuthAsync(byteContent, method, Url, cancellationToken);
+                    await UpYunAuthAsync(byteContent, method, url, cancellationToken);
                 }
                 else
                 {
@@ -155,19 +155,19 @@ namespace UpYun.NETCore
                 HttpResponseMessage responseMsg;
                 if ("Get".Equals(method, StringComparison.OrdinalIgnoreCase))
                 {
-                    responseMsg = await httpClient.GetAsync(Url, cancellationToken);
+                    responseMsg = await httpClient.GetAsync(url, cancellationToken);
                 }
                 else if ("Post".Equals(method, StringComparison.OrdinalIgnoreCase))
                 {
-                    responseMsg = await httpClient.PostAsync(Url, byteContent, cancellationToken);
+                    responseMsg = await httpClient.PostAsync(url, byteContent, cancellationToken);
                 }
                 else if ("PUT".Equals(method, StringComparison.OrdinalIgnoreCase))
                 {
-                    responseMsg = await httpClient.PutAsync(Url, byteContent, cancellationToken);
+                    responseMsg = await httpClient.PutAsync(url, byteContent, cancellationToken);
                 }
                 else if ("Delete".Equals(method, StringComparison.OrdinalIgnoreCase))
                 {
-                    responseMsg = await httpClient.DeleteAsync(Url, cancellationToken);
+                    responseMsg = await httpClient.DeleteAsync(url, cancellationToken);
                 }
                 else
                 {
@@ -336,8 +336,8 @@ namespace UpYun.NETCore
         public async Task<UpYunResult> MoveFileAsync(string path, string dest, CancellationToken cancellationToken = default)
         {
             Dictionary <string,object> headers = new Dictionary<string,object>();
-            headers["X-Upyun-Move-Source"] = DL + this.bucketname + path;
-            var resp = await NewWorkAsync("PUT", DL + this.bucketname + dest, null, headers, cancellationToken);
+            headers["X-Upyun-Move-Source"] = DL + this.bucketname + Uri.EscapeUriString(path);
+            var resp = await NewWorkAsync("PUT", DL + this.bucketname + Uri.EscapeUriString(dest), null, headers, cancellationToken);
             if (resp.StatusCode == System.Net.HttpStatusCode.OK)
             {
                 return UpYunResult.OK;
