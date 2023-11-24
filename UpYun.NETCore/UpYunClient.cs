@@ -115,7 +115,7 @@ namespace UpYun.NETCore
             }
             using (ByteArrayContent byteContent = new ByteArrayContent(postData))
             {
-                httpClient.BaseAddress = new Uri("http://" + api_domain);
+                httpClient.BaseAddress = new Uri("https://" + api_domain);
                 if (this.auto_mkdir == true)
                 {
                     byteContent.Headers.Add("mkdir", "true");
