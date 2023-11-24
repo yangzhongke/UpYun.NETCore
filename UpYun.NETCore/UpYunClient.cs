@@ -24,6 +24,8 @@ namespace UpYun.NETCore
         private string file_secret;
         private string content_md5;
         private bool auto_mkdir = false;
+        
+
         public string version() { return "1.0.1"; }
 
         /**
@@ -41,12 +43,17 @@ namespace UpYun.NETCore
             this.httpClientFactory = httpClientFactory;
         }
 
-        /**
+        /// <summary>
+        /// 是否使用Https协议
+        /// </summary>
+		public bool IsHttps { get; set; }=true;
+
+		/**
         * 切换 API 接口的域名
         * @param $domain {默认 v0.api.upyun.com 自动识别, v1.api.upyun.com 电信, v2.api.upyun.com 联通, v3.api.upyun.com 移动}
         * return null;
         */
-        public void setApiDomain(string domain)
+		public void setApiDomain(string domain)
         {
             this.api_domain = domain;
         }
@@ -115,7 +122,8 @@ namespace UpYun.NETCore
             }
             using (ByteArrayContent byteContent = new ByteArrayContent(postData))
             {
-                httpClient.BaseAddress = new Uri("https://" + api_domain);
+                string protocol = IsHttps ? "https://" : "http://";
+                httpClient.BaseAddress = new Uri(protocol + api_domain);
                 if (this.auto_mkdir == true)
                 {
                     byteContent.Headers.Add("mkdir", "true");
